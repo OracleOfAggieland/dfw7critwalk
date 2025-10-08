@@ -1,0 +1,12 @@
+Will this current plan allow for live data? If manager has dashboard open is it updated constantly so they have live data?
+
+
+May need to remove development Philosophy
+
+Pitch: I am using what I learned in school to solve inefficiencies I see at work. Currently
+there is no clear visibility for the completion of critwalks. It is currently tracked over manually
+slack groups that clutter our slack console. Also, anyone working on critwalks doesn't have a central 
+point to see the status of the completions. With a central dashboard any manager and any tech
+can get up to date information and can assign techs to crit walks that have beene misseed. 
+Techs can also easily determine if some have been missed and provide coverage when needed. 
+
