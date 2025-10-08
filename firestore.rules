@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Equipment
+    match /equipment/{equipmentId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+
+      // Crit walks subcollection
+      match /critWalks/{critWalkId} {
+        allow read: if isAuthenticated();
+        allow write: if isAuthenticated();
+      }
+    }
+
+    // Equipment Status
+    match /equipmentStatus/{statusId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // Assignments
+    match /assignments/{assignmentId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+  }
+}
