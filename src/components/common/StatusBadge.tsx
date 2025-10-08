@@ -1,4 +1,4 @@
-import { StatusColor, getStatusColor, getStatusTextColor, getStatusBgClass } from '../../utils/statusCalculator';
+import { StatusColor, getStatusColor, getStatusTextColor } from '../../utils/statusCalculator';
 
 interface StatusBadgeProps {
   status: StatusColor;

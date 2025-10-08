@@ -7,6 +7,7 @@ interface ButtonProps {
   variant?: 'primary' | 'secondary' | 'danger';
   disabled?: boolean;
   fullWidth?: boolean;
+  className?: string;
 }
 
 export function Button({
@@ -15,7 +16,8 @@ export function Button({
   type = 'button',
   variant = 'primary',
   disabled = false,
-  fullWidth = false
+  fullWidth = false,
+  className = ''
 }: ButtonProps) {
   const variantClasses = {
     primary: 'btn-primary',
@@ -30,7 +32,7 @@ export function Button({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`${variantClasses[variant]} ${widthClass} min-h-[48px] text-lg`}
+      className={`${variantClasses[variant]} ${widthClass} min-h-[48px] text-lg ${className}`}
     >
       {children}
     </button>

@@ -4,7 +4,7 @@ export type StatusColor = 'green' | 'yellow' | 'red' | 'never';
 
 export const calculateStatus = (
   lastCritWalkAt: Timestamp | null,
-  critWalkInterval: number = 12
+  _critWalkInterval: number = 12
 ): StatusColor => {
   if (!lastCritWalkAt) return 'never';
 

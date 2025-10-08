@@ -1,26 +1,32 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useUser } from '../../contexts/UserContext';
-import { createEquipment } from '../../services/equipment.service';
-import { EquipmentFormData } from '../../types/equipment.types';
+import { createEquipment, updateEquipment, deleteEquipment } from '../../services/equipment.service';
+import { Equipment, EquipmentFormData } from '../../types/equipment.types';
 import { EQUIPMENT_CATEGORIES } from '../../data/teamMembers';
 import { Button } from '../common/Button';
 
 interface EquipmentFormProps {
   onSuccess: () => void;
+  onDelete?: () => void;
+  equipment?: Equipment | null;
+  equipmentId?: string;
 }
 
-export function EquipmentForm({ onSuccess }: EquipmentFormProps) {
+export function EquipmentForm({ onSuccess, onDelete, equipment, equipmentId }: EquipmentFormProps) {
   const { userProfile } = useUser();
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [error, setError] = useState('');
+  const isEditMode = !!equipment && !!equipmentId;
 
   const {
     register,
     handleSubmit,
     formState: { errors }
   } = useForm<EquipmentFormData>({
-    defaultValues: {
+    defaultValues: equipment || {
       critWalkInterval: 12,
       expectedPhotoCount: 1
     }
@@ -31,13 +37,37 @@ export function EquipmentForm({ onSuccess }: EquipmentFormProps) {
     setError('');
 
     try {
-      await createEquipment(data, userProfile.name);
+      if (isEditMode) {
+        await updateEquipment(equipmentId, data);
+      } else {
+        await createEquipment(data, userProfile.name);
+      }
       onSuccess();
     } catch (err) {
-      setError('Failed to create equipment. Please try again.');
+      setError(isEditMode ? 'Failed to update equipment. Please try again.' : 'Failed to create equipment. Please try again.');
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!equipmentId) return;
+
+    setDeleting(true);
+    setError('');
+
+    try {
+      await deleteEquipment(equipmentId);
+      if (onDelete) {
+        onDelete();
+      }
+    } catch (err) {
+      setError('Failed to delete equipment. Please try again.');
+      console.error(err);
+      setShowDeleteConfirm(false);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -164,11 +194,54 @@ export function EquipmentForm({ onSuccess }: EquipmentFormProps) {
         />
       </div>
 
-      <div className="flex gap-2 pt-4">
-        <Button type="submit" disabled={loading} fullWidth>
-          {loading ? 'Creating...' : 'Create Equipment'}
+      <div className="flex flex-col md:flex-row gap-3 pt-4">
+        <Button type="submit" disabled={loading || deleting} fullWidth>
+          {loading
+            ? (isEditMode ? 'Updating...' : 'Creating...')
+            : (isEditMode ? 'Update Equipment' : 'Create Equipment')}
         </Button>
+
+        {isEditMode && (
+          <Button
+            type="button"
+            variant="danger"
+            disabled={loading || deleting}
+            onClick={() => setShowDeleteConfirm(true)}
+            fullWidth
+          >
+            Delete Equipment
+          </Button>
+        )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-xl font-bold mb-4 text-gray-900">Delete Equipment?</h3>
+            <p className="text-gray-700 mb-6">
+              Are you sure you want to delete <strong>{equipment?.name}</strong>? This will hide the equipment from the dashboard. This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleting}
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-md hover:bg-gray-50 transition min-h-[48px]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex-1 px-4 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 transition min-h-[48px]"
+                style={{ backgroundColor: deleting ? '#9CA3AF' : '#DC2626' }}
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 }

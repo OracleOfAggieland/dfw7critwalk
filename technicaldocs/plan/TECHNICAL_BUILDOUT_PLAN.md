@@ -404,122 +404,122 @@ All components must be optimized for touch, camera access, and one-handed operat
 **MOBILE-FIRST LAYOUT**: All pages must work perfectly on phones first, enhance for desktop.
 
 ### 9.1 Login Page
-- [ ] Create `src/pages/Login.tsx`
-- [ ] Display logo (large, centered)
-- [ ] Password input field
-- [ ] Validate password matches env variable
-- [ ] Call loginAsTeam() on submit
-- [ ] Show error message on failure
-- [ ] Loading state during authentication
-- [ ] **Mobile**: 16px+ font size on input (prevents iOS zoom)
-- [ ] **Mobile**: Full-screen centered layout
-- [ ] **Mobile**: Large login button (min 56px height)
+- [x] Create `src/pages/Login.tsx`
+- [x] Display logo (large, centered)
+- [x] Password input field
+- [x] Validate password matches env variable
+- [x] Call loginAsTeam() on submit
+- [x] Show error message on failure
+- [x] Loading state during authentication
+- [x] **Mobile**: 16px+ font size on input (prevents iOS zoom)
+- [x] **Mobile**: Full-screen centered layout
+- [x] **Mobile**: Large login button (min 56px height)
 
 ### 9.2 Dashboard Page
-- [ ] Create `src/pages/Dashboard.tsx`
-- [ ] Render EquipmentGrid component
-- [ ] Simple wrapper page
-- [ ] **Mobile**: Full width, edge-to-edge equipment cards
-- [ ] **Mobile**: Pull-to-refresh support (future enhancement)
+- [x] Create `src/pages/Dashboard.tsx`
+- [x] Render EquipmentGrid component
+- [x] Simple wrapper page
+- [x] **Mobile**: Full width, edge-to-edge equipment cards
+- [x] **Mobile**: Pull-to-refresh support (future enhancement)
 
 ### 9.3 Equipment Detail Page
-- [ ] Create `src/pages/EquipmentDetail.tsx`
-- [ ] Load equipment by ID from URL params
-- [ ] Display equipment details card
-  - [ ] Name, location, status badge
-  - [ ] Category, last walk, total walks
-  - [ ] Description, photo guidelines
-- [ ] Show "Complete Crit Walk" button for technicians
-- [ ] Render CritWalkHistory component
-- [ ] Integrate CritWalkForm in modal
-- [ ] Refresh data after crit walk completion
-- [ ] **Mobile**: Hero section with large equipment name
-- [ ] **Mobile**: Photo guidelines in prominent callout box
-- [ ] **Mobile**: Bottom-anchored "Complete Crit Walk" button (sticky)
-- [ ] **Mobile**: Full-screen modal for crit walk form
-- [ ] **Mobile**: Swipeable photo gallery in history
+- [x] Create `src/pages/EquipmentDetail.tsx`
+- [x] Load equipment by ID from URL params
+- [x] Display equipment details card
+  - [x] Name, location, status badge
+  - [x] Category, last walk, total walks
+  - [x] Description, photo guidelines
+- [x] Show "Complete Crit Walk" button for technicians
+- [x] Render CritWalkHistory component
+- [x] Integrate CritWalkForm in modal
+- [x] Refresh data after crit walk completion
+- [x] **Mobile**: Hero section with large equipment name
+- [x] **Mobile**: Photo guidelines in prominent callout box
+- [x] **Mobile**: Bottom-anchored "Complete Crit Walk" button (sticky)
+- [x] **Mobile**: Full-screen modal for crit walk form
+- [x] **Mobile**: Swipeable photo gallery in history
 
 ### 9.4 Layout Component
-- [ ] Create `src/components/Layout.tsx`
-- [ ] Header with logo, title, user info
-  - [ ] Click logo/title to navigate to dashboard
-  - [ ] Display user name and role badge
-  - [ ] "Change User" button
-  - [ ] "Logout" button (red, brand color)
-- [ ] Main content area with max-width container
-- [ ] Footer with DFW7 RME branding
-- [ ] **Mobile**: Compact header (logo icon only, not full logo)
-- [ ] **Mobile**: Hamburger menu for user actions
-- [ ] **Mobile**: Bottom navigation bar for primary actions
-- [ ] **Mobile**: Hide footer on small screens (more screen space)
-- [ ] **Desktop**: Full header with logo, expanded nav
+- [x] Create `src/components/Layout.tsx`
+- [x] Header with logo, title, user info
+  - [x] Click logo/title to navigate to dashboard
+  - [x] Display user name and role badge
+  - [x] "Change User" button
+  - [x] "Logout" button (red, brand color)
+- [x] Main content area with max-width container
+- [x] Footer with DFW7 RME branding
+- [x] **Mobile**: Compact header (logo icon only, not full logo)
+- [x] **Mobile**: Hamburger menu for user actions
+- [x] **Mobile**: Bottom navigation bar for primary actions
+- [x] **Mobile**: Hide footer on small screens (more screen space)
+- [x] **Desktop**: Full header with logo, expanded nav
 
 ---
 
 ## Phase 10: Main App & Routing
 
 ### 10.1 App Component
-- [ ] Create `src/App.tsx`
-- [ ] Set up BrowserRouter
-- [ ] Add auth state listener
-  - [ ] Track isAuthenticated
-  - [ ] Load userProfile from localStorage
-- [ ] Implement routing logic
-  - [ ] Not authenticated → Login page
-  - [ ] Authenticated, no profile → User selection
-  - [ ] Authenticated with profile → Dashboard/Equipment routes
-- [ ] Implement handleUserSelected callback
-- [ ] Implement handleChangeUser callback
-- [ ] Show loading spinner during auth check
+- [x] Create `src/App.tsx`
+- [x] Set up BrowserRouter
+- [x] Add auth state listener
+  - [x] Track isAuthenticated
+  - [x] Load userProfile from localStorage
+- [x] Implement routing logic
+  - [x] Not authenticated → Login page
+  - [x] Authenticated, no profile → User selection
+  - [x] Authenticated with profile → Dashboard/Equipment routes
+- [x] Implement handleUserSelected callback
+- [x] Implement handleChangeUser callback
+- [x] Show loading spinner during auth check
 
 ### 10.2 Main Entry Point
-- [ ] Create/Update `src/main.tsx`
-- [ ] Render App in React StrictMode
-- [ ] Import index.css
+- [x] Create/Update `src/main.tsx`
+- [x] Render App in React StrictMode
+- [x] Import index.css
 
 ---
 
 ## Phase 11: Firestore Security Rules
 
 ### 11.1 Configure Firestore Rules
-- [ ] Create/Update `firestore.rules`
-- [ ] Add authentication check function
-- [ ] Allow read/write to `equipment` collection (authenticated)
-- [ ] Allow read/write to `equipment/{id}/critWalks` subcollection
-- [ ] Allow read/write to `equipmentStatus` collection
-- [ ] Allow read/write to `assignments` collection
-- [ ] Deploy rules: `firebase deploy --only firestore:rules`
+- [x] Create/Update `firestore.rules`
+- [x] Add authentication check function
+- [x] Allow read/write to `equipment` collection (authenticated)
+- [x] Allow read/write to `equipment/{id}/critWalks` subcollection
+- [x] Allow read/write to `equipmentStatus` collection
+- [x] Allow read/write to `assignments` collection
+- [x] Deploy rules: `firebase deploy --only firestore:rules`
 
 ---
 
 ## Phase 12: Storage Security Rules
 
 ### 12.1 Configure Storage Rules
-- [ ] Create/Update `storage.rules`
-- [ ] Allow authenticated users to read/write photos
-  - [ ] Path: `equipment/{equipmentId}/critwalks/{critWalkId}/{filename}`
-- [ ] Deploy rules: `firebase deploy --only storage:rules`
+- [x] Create/Update `storage.rules`
+- [x] Allow authenticated users to read/write photos
+  - [x] Path: `equipment/{equipmentId}/critwalks/{critWalkId}/{filename}`
+- [x] Deploy rules: `firebase deploy --only storage`
 
 ---
 
 ## Phase 13: Build & Deploy Configuration
 
 ### 13.1 Vite Configuration
-- [ ] Create/Update `vite.config.ts`
-- [ ] Set output directory to `dist`
-- [ ] Disable sourcemaps for production
+- [x] Create/Update `vite.config.ts`
+- [x] Set output directory to `dist`
+- [x] Disable sourcemaps for production
 
 ### 13.2 Firebase Hosting Configuration
-- [ ] Create/Update `firebase.json`
-- [ ] Set public directory to `dist`
-- [ ] Add SPA rewrite rule (all routes → index.html)
-- [ ] Configure Firestore, Storage, Hosting
+- [x] Create/Update `firebase.json`
+- [x] Set public directory to `dist`
+- [x] Add SPA rewrite rule (all routes → index.html)
+- [x] Configure Firestore, Storage, Hosting
 
 ### 13.3 Package Scripts
-- [ ] Add `"dev": "vite"` script
-- [ ] Add `"build": "tsc && vite build"` script
-- [ ] Add `"preview": "vite preview"` script
-- [ ] Add `"deploy": "npm run build && firebase deploy"` script
+- [x] Add `"dev": "vite"` script
+- [x] Add `"build": "tsc && vite build"` script
+- [x] Add `"preview": "vite preview"` script
+- [x] Add `"deploy": "npm run build && firebase deploy"` script
 
 ---
 

@@ -73,16 +73,6 @@ Equipment status is dynamically calculated based on time since last crit walk:
 
 Status colors are brand-aligned (see Brand Colors below).
 
-## Development Philosophy
-
-**From `technicaldocs/developmentPhilosophy.txt`**:
-
-- **Minimal Scope**: Every enhancement should contain only what's needed. Build the leanest possible version to deliver value.
-- **Vertical Slicing**: Implement features end-to-end through necessary layers before considering downstream systems.
-- **YAGNI Principle**: Build only what is required now, not what might be needed later.
-- **Single-Focus Specs**: One core requirement per spec. Additional needs documented separately.
-- **Simple Solutions**: Prioritize straightforward approaches over complex ones.
-- **Minimal Dependencies**: Avoid unnecessary external dependencies.
 
 ## Brand & Design System
 

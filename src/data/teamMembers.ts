@@ -81,5 +81,6 @@ export const EQUIPMENT_CATEGORIES = [
   'Forklift',
   'Dock Equipment',
   'Safety Equipment',
+  'Printers',
   'Other'
 ];
