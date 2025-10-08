@@ -23,12 +23,72 @@ export function PhotoUpload({ onPhotosSelected, maxPhotos = 10 }: PhotoUploadPro
     setFiles(newFiles);
     onPhotosSelected(newFiles);
 
-    // Create previews
+    // Create compressed previews for mobile performance
     selectedFiles.forEach(file => {
+      createCompressedPreview(file).then(preview => {
+        setPreviews(prev => [...prev, preview]);
+      }).catch(err => {
+        console.error('Failed to create preview:', err);
+        // Fallback to original if compression fails
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPreviews(prev => [...prev, reader.result as string]);
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+  };
+
+  const createCompressedPreview = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviews(prev => [...prev, reader.result as string]);
+
+      reader.onerror = () => reject(new Error('Failed to read file'));
+
+      reader.onload = (e) => {
+        const img = new Image();
+
+        img.onerror = () => reject(new Error('Failed to load image'));
+
+        img.onload = () => {
+          // Smaller size for previews (saves memory)
+          const MAX_PREVIEW_SIZE = 400;
+
+          let width = img.width;
+          let height = img.height;
+
+          // Scale down maintaining aspect ratio
+          if (width > height) {
+            if (width > MAX_PREVIEW_SIZE) {
+              height = Math.round((height * MAX_PREVIEW_SIZE) / width);
+              width = MAX_PREVIEW_SIZE;
+            }
+          } else {
+            if (height > MAX_PREVIEW_SIZE) {
+              width = Math.round((width * MAX_PREVIEW_SIZE) / height);
+              height = MAX_PREVIEW_SIZE;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            reject(new Error('Failed to get canvas context'));
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Lower quality for previews (0.7)
+          resolve(canvas.toDataURL('image/jpeg', 0.7));
+        };
+
+        img.src = e.target?.result as string;
       };
+
       reader.readAsDataURL(file);
     });
   };

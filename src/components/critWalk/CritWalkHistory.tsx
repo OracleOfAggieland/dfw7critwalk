@@ -108,7 +108,7 @@ export function CritWalkHistory({ equipmentId }: CritWalkHistoryProps) {
                 {walk.photos.map((photo, index) => (
                   <div
                     key={index}
-                    className="relative group cursor-pointer overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-all duration-200 h-48 bg-gray-100"
+                    className="relative group cursor-pointer overflow-hidden rounded-lg shadow-md hover:shadow-xl transition-shadow duration-200 aspect-square bg-gray-100"
                     onClick={() =>
                       openLightbox(
                         walk.photos.map((p) => p.storageUrl),
@@ -119,11 +119,10 @@ export function CritWalkHistory({ equipmentId }: CritWalkHistoryProps) {
                     <img
                       src={photo.storageUrl}
                       alt={`Crit walk photo ${index + 1}`}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                      loading="lazy"
+                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-200 z-0"
                     />
                     {/* Overlay with magnifying glass icon */}
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center pointer-events-none">
+                    <div className="absolute inset-0 group-hover:bg-black group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center pointer-events-none z-10">
                       <svg
                         className="w-10 h-10 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                         fill="none"
