@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { getCritWalksByEquipment } from '../../services/critWalk.service';
+import { getCritWalksByEquipment, updateCritWalkFailureStatus, addCritWalkComment, updateCritWalkFailureDetails } from '../../services/critWalk.service';
 import { CritWalk } from '../../types/critWalk.types';
 import { formatTimestamp } from '../../utils/dateHelpers';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { ImageLightbox } from '../common/ImageLightbox';
+import { useUser } from '../../contexts/UserContext';
+import { Button } from '../common/Button';
 
 interface CritWalkHistoryProps {
   equipmentId: string;
@@ -16,9 +18,14 @@ interface LightboxState {
 }
 
 export function CritWalkHistory({ equipmentId }: CritWalkHistoryProps) {
+  const { userProfile } = useUser();
   const [critWalks, setCritWalks] = useState<CritWalk[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [commentText, setCommentText] = useState<Map<string, string>>(new Map());
+  const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
+  const [editingIds, setEditingIds] = useState<Set<string>>(new Set());
+  const [editValues, setEditValues] = useState<Map<string, { hasFailure: boolean; workOrderNumber: string }>>(new Map());
   const [lightbox, setLightbox] = useState<LightboxState>({
     isOpen: false,
     images: [],
@@ -66,6 +73,128 @@ export function CritWalkHistory({ equipmentId }: CritWalkHistoryProps) {
     });
   };
 
+  const handleResolveFailure = async (walkId: string) => {
+    setProcessingIds(prev => new Set(prev).add(walkId));
+    try {
+      await updateCritWalkFailureStatus(equipmentId, walkId, userProfile.name);
+      await loadCritWalks(); // Reload to get updated data
+    } catch (error) {
+      console.error('Error resolving failure:', error);
+      alert('Failed to resolve failure. Please try again.');
+    } finally {
+      setProcessingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(walkId);
+        return newSet;
+      });
+    }
+  };
+
+  const handleAddComment = async (walkId: string) => {
+    const text = commentText.get(walkId)?.trim();
+    if (!text) return;
+
+    setProcessingIds(prev => new Set(prev).add(walkId));
+    try {
+      await addCritWalkComment(equipmentId, walkId, text, userProfile.name);
+
+      // Clear the comment text
+      setCommentText(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(walkId);
+        return newMap;
+      });
+
+      await loadCritWalks(); // Reload to get updated data
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      alert('Failed to add comment. Please try again.');
+    } finally {
+      setProcessingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(walkId);
+        return newSet;
+      });
+    }
+  };
+
+  const updateCommentText = (walkId: string, text: string) => {
+    setCommentText(prev => {
+      const newMap = new Map(prev);
+      newMap.set(walkId, text);
+      return newMap;
+    });
+  };
+
+  const startEditing = (walk: CritWalk) => {
+    setEditingIds(prev => new Set(prev).add(walk.id));
+    setEditValues(prev => {
+      const newMap = new Map(prev);
+      newMap.set(walk.id, {
+        hasFailure: walk.hasFailure,
+        workOrderNumber: walk.workOrderNumber || ''
+      });
+      return newMap;
+    });
+  };
+
+  const cancelEditing = (walkId: string) => {
+    setEditingIds(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(walkId);
+      return newSet;
+    });
+    setEditValues(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(walkId);
+      return newMap;
+    });
+  };
+
+  const saveEdit = async (walkId: string) => {
+    const values = editValues.get(walkId);
+    if (!values) return;
+
+    setProcessingIds(prev => new Set(prev).add(walkId));
+    try {
+      await updateCritWalkFailureDetails(
+        equipmentId,
+        walkId,
+        values.hasFailure,
+        values.workOrderNumber.trim() || null
+      );
+
+      setEditingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(walkId);
+        return newSet;
+      });
+
+      await loadCritWalks(); // Reload to get updated data
+    } catch (error) {
+      console.error('Error saving edit:', error);
+      alert('Failed to save changes. Please try again.');
+    } finally {
+      setProcessingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(walkId);
+        return newSet;
+      });
+    }
+  };
+
+  const updateEditValue = (walkId: string, field: 'hasFailure' | 'workOrderNumber', value: boolean | string) => {
+    setEditValues(prev => {
+      const newMap = new Map(prev);
+      const current = newMap.get(walkId) || { hasFailure: false, workOrderNumber: '' };
+      newMap.set(walkId, {
+        ...current,
+        [field]: value
+      });
+      return newMap;
+    });
+  };
+
   if (loading) return <LoadingSpinner />;
 
   if (critWalks.length === 0) {
@@ -80,12 +209,29 @@ export function CritWalkHistory({ equipmentId }: CritWalkHistoryProps) {
     <div className="space-y-4">
       {critWalks.map(walk => {
         const isExpanded = expandedIds.has(walk.id);
+        const isProcessing = processingIds.has(walk.id);
+        const isResolved = walk.hasFailure && walk.failureResolvedAt != null;
+        const isEditing = editingIds.has(walk.id);
+        const editValue = editValues.get(walk.id);
+        const isManager = userProfile.role === 'manager';
 
         return (
           <div key={walk.id} className="card">
             <div className="flex items-start justify-between mb-3">
               <div className="flex-1">
-                <p className="font-medium text-gray-900">{walk.technicianName}</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-medium text-gray-900">{walk.technicianName}</p>
+                  {walk.hasFailure && !isResolved && (
+                    <span className="text-brand-red font-bold" title="Flagged failure">
+                      🚨 FLAGGED
+                    </span>
+                  )}
+                  {isResolved && (
+                    <span className="text-green-600 font-bold" title="Resolved">
+                      ✓ RESOLVED
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm text-gray-600">
                   {formatTimestamp(walk.completedAt)}
                 </p>
@@ -97,6 +243,98 @@ export function CritWalkHistory({ equipmentId }: CritWalkHistoryProps) {
                 {walk.photos.length} photo{walk.photos.length !== 1 ? 's' : ''} {isExpanded ? '▲' : '▼'}
               </button>
             </div>
+
+            {/* Work Order Info - View Mode */}
+            {!isEditing && walk.workOrderNumber && (
+              <div className={`mb-3 px-3 py-2 rounded-md ${
+                walk.hasFailure
+                  ? (isResolved ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200')
+                  : 'bg-gray-50 border border-gray-200'
+              }`}>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <p className={`text-sm font-medium ${
+                      walk.hasFailure
+                        ? (isResolved ? 'text-green-700' : 'text-brand-red')
+                        : 'text-gray-700'
+                    }`}>
+                      {walk.hasFailure ? '⚠️ Issue:' : '🔧 Referenced:'} Work Order {walk.workOrderNumber}
+                    </p>
+                    {isResolved && walk.failureResolvedAt && (
+                      <p className="text-xs text-green-600 mt-1">
+                        Resolved by {walk.failureResolvedBy} on {formatTimestamp(walk.failureResolvedAt)}
+                      </p>
+                    )}
+                  </div>
+                  {isManager && !isResolved && (
+                    <button
+                      onClick={() => startEditing(walk)}
+                      className="ml-2 text-xs text-brand-blue hover:underline"
+                    >
+                      Edit
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Failure Info - Edit Mode (Managers Only) */}
+            {isEditing && isManager && editValue && (
+              <div className="mb-3 px-3 py-3 rounded-md bg-blue-50 border border-blue-200">
+                <p className="text-xs font-medium text-gray-700 mb-2">Edit Failure Details</p>
+
+                {/* Toggle Failure Flag */}
+                <div className="mb-3">
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editValue.hasFailure}
+                      onChange={(e) => updateEditValue(walk.id, 'hasFailure', e.target.checked)}
+                      className="h-4 w-4 text-brand-blue focus:ring-brand-blue border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">
+                      This crit walk has a failure
+                    </span>
+                  </label>
+                </div>
+
+                {/* Work Order Number */}
+                {editValue.hasFailure && (
+                  <div className="mb-3">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Work Order Number
+                    </label>
+                    <input
+                      type="text"
+                      value={editValue.workOrderNumber}
+                      onChange={(e) => updateEditValue(walk.id, 'workOrderNumber', e.target.value)}
+                      className="input-field text-sm w-full"
+                      placeholder="WO-12345"
+                    />
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => saveEdit(walk.id)}
+                    disabled={isProcessing}
+                    variant="primary"
+                    fullWidth={false}
+                  >
+                    {isProcessing ? 'Saving...' : 'Save'}
+                  </Button>
+                  <Button
+                    onClick={() => cancelEditing(walk.id)}
+                    disabled={isProcessing}
+                    variant="secondary"
+                    fullWidth={false}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {walk.notes && (
               <p className="text-sm text-gray-700 mb-3">{walk.notes}</p>
@@ -139,6 +377,66 @@ export function CritWalkHistory({ equipmentId }: CritWalkHistoryProps) {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* Comments Section */}
+            {walk.comments && walk.comments.length > 0 && (
+              <div className="mt-4 border-t border-gray-200 pt-4">
+                <p className="text-sm font-medium text-gray-700 mb-2">💬 Comments ({walk.comments.length})</p>
+                <div className="space-y-2">
+                  {walk.comments.map((comment) => (
+                    <div key={comment.id} className="bg-gray-50 rounded-md p-3">
+                      <p className="text-xs text-gray-600 mb-1">
+                        {comment.createdBy} - {formatTimestamp(comment.createdAt)}
+                      </p>
+                      <p className="text-sm text-gray-800">{comment.text}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            {walk.workOrderNumber && (
+              <div className="mt-4 border-t border-gray-200 pt-4 space-y-3">
+                {/* Mark as Resolved Button */}
+                {walk.hasFailure && !isResolved && (
+                  <Button
+                    onClick={() => handleResolveFailure(walk.id)}
+                    disabled={isProcessing}
+                    variant="secondary"
+                    fullWidth
+                  >
+                    {isProcessing ? 'Resolving...' : '✓ Mark as Resolved'}
+                  </Button>
+                )}
+
+                {/* Add Comment */}
+                <div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={commentText.get(walk.id) || ''}
+                      onChange={(e) => updateCommentText(walk.id, e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !isProcessing) {
+                          handleAddComment(walk.id);
+                        }
+                      }}
+                      placeholder="Add a comment..."
+                      className="input-field text-sm flex-1"
+                      disabled={isProcessing}
+                    />
+                    <Button
+                      onClick={() => handleAddComment(walk.id)}
+                      disabled={isProcessing || !commentText.get(walk.id)?.trim()}
+                      variant="primary"
+                    >
+                      {isProcessing ? '...' : '💬'}
+                    </Button>
+                  </div>
+                </div>
               </div>
             )}
           </div>

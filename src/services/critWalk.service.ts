@@ -8,10 +8,12 @@ import {
   limit,
   Timestamp,
   serverTimestamp,
-  updateDoc
+  updateDoc,
+  doc,
+  arrayUnion
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { CritWalk, CritWalkFormData, CritWalkPhoto } from '../types/critWalk.types';
+import { CritWalk, CritWalkFormData, CritWalkPhoto, CritWalkComment } from '../types/critWalk.types';
 import { uploadMultiplePhotos } from './storage.service';
 
 const EQUIPMENT_COLLECTION = 'equipment';
@@ -30,7 +32,12 @@ export const createCritWalk = async (
       technicianName,
       completedAt: serverTimestamp(),
       notes: data.notes || '',
-      photos: []
+      photos: [],
+      hasFailure: data.hasFailure || false,
+      workOrderNumber: data.workOrderNumber || null,
+      failureResolvedAt: null,
+      failureResolvedBy: null,
+      comments: []
     };
 
     const critWalkRef = await addDoc(
@@ -54,7 +61,11 @@ export const createCritWalk = async (
     await updateDoc(critWalkRef, { photos });
 
     // Update equipment status
-    await updateEquipmentStatus(data.equipmentId, technicianName);
+    await updateEquipmentStatus(
+      data.equipmentId,
+      technicianName,
+      data.hasFailure || false
+    );
 
     return critWalkRef.id;
   } catch (error) {
@@ -65,7 +76,8 @@ export const createCritWalk = async (
 
 const updateEquipmentStatus = async (
   equipmentId: string,
-  technicianName: string
+  technicianName: string,
+  hasFailure: boolean = false
 ): Promise<void> => {
   try {
     const now = Timestamp.now();
@@ -80,11 +92,22 @@ const updateEquipmentStatus = async (
 
     if (!snapshot.empty) {
       const statusDoc = snapshot.docs[0];
+      const currentData = statusDoc.data();
+
+      // Calculate active failure count
+      let activeFailureCount = currentData.activeFailureCount || 0;
+      if (hasFailure) {
+        activeFailureCount += 1;
+      }
+
       await updateDoc(statusDoc.ref, {
         lastCritWalkAt: now,
         lastCritWalkBy: technicianName,
         status: 'green',
-        totalWalksCompleted: (statusDoc.data().totalWalksCompleted || 0) + 1
+        totalWalksCompleted: (currentData.totalWalksCompleted || 0) + 1,
+        hasActiveFailure: activeFailureCount > 0,
+        activeFailureCount: activeFailureCount,
+        lastFailureAt: hasFailure ? now : currentData.lastFailureAt || null
       });
     }
   } catch (error) {
@@ -111,5 +134,152 @@ export const getCritWalksByEquipment = async (
   } catch (error) {
     console.error('Error fetching crit walks:', error);
     return [];
+  }
+};
+
+/**
+ * Update the failure status of a crit walk (mark as resolved)
+ */
+export const updateCritWalkFailureStatus = async (
+  equipmentId: string,
+  critWalkId: string,
+  resolvedBy: string
+): Promise<void> => {
+  try {
+    const critWalkRef = doc(
+      db,
+      EQUIPMENT_COLLECTION,
+      equipmentId,
+      'critWalks',
+      critWalkId
+    );
+
+    await updateDoc(critWalkRef, {
+      failureResolvedAt: Timestamp.now(),
+      failureResolvedBy: resolvedBy
+    });
+
+    // Update equipment status - decrement active failure count
+    const statusQuery = query(
+      collection(db, EQUIPMENT_STATUS_COLLECTION),
+      where('equipmentId', '==', equipmentId)
+    );
+
+    const statusSnapshot = await getDocs(statusQuery);
+
+    if (!statusSnapshot.empty) {
+      const statusDoc = statusSnapshot.docs[0];
+      const currentData = statusDoc.data();
+      const newCount = Math.max((currentData.activeFailureCount || 1) - 1, 0);
+
+      await updateDoc(statusDoc.ref, {
+        activeFailureCount: newCount,
+        hasActiveFailure: newCount > 0
+      });
+    }
+
+    console.log('Failure status updated successfully');
+  } catch (error) {
+    console.error('Error updating failure status:', error);
+    throw new Error('Failed to update failure status');
+  }
+};
+
+/**
+ * Add a comment to a crit walk
+ */
+export const addCritWalkComment = async (
+  equipmentId: string,
+  critWalkId: string,
+  commentText: string,
+  createdBy: string
+): Promise<void> => {
+  try {
+    const critWalkRef = doc(
+      db,
+      EQUIPMENT_COLLECTION,
+      equipmentId,
+      'critWalks',
+      critWalkId
+    );
+
+    const comment: CritWalkComment = {
+      id: `comment_${Date.now()}`,
+      text: commentText,
+      createdBy: createdBy,
+      createdAt: Timestamp.now()
+    };
+
+    await updateDoc(critWalkRef, {
+      comments: arrayUnion(comment)
+    });
+
+    console.log('Comment added successfully');
+  } catch (error) {
+    console.error('Error adding comment:', error);
+    throw new Error('Failed to add comment');
+  }
+};
+
+/**
+ * Update failure details (hasFailure and workOrderNumber) - Manager only
+ */
+export const updateCritWalkFailureDetails = async (
+  equipmentId: string,
+  critWalkId: string,
+  hasFailure: boolean,
+  workOrderNumber: string | null
+): Promise<void> => {
+  try {
+    const critWalkRef = doc(
+      db,
+      EQUIPMENT_COLLECTION,
+      equipmentId,
+      'critWalks',
+      critWalkId
+    );
+
+    await updateDoc(critWalkRef, {
+      hasFailure,
+      workOrderNumber: workOrderNumber || null
+    });
+
+    // Update equipment status based on new failure state
+    const statusQuery = query(
+      collection(db, EQUIPMENT_STATUS_COLLECTION),
+      where('equipmentId', '==', equipmentId)
+    );
+
+    const statusSnapshot = await getDocs(statusQuery);
+
+    if (!statusSnapshot.empty) {
+      const statusDoc = statusSnapshot.docs[0];
+
+      // Recalculate active failure count by querying all crit walks
+      const critWalksQuery = query(
+        collection(db, EQUIPMENT_COLLECTION, equipmentId, 'critWalks')
+      );
+      const critWalksSnapshot = await getDocs(critWalksQuery);
+
+      let activeCount = 0;
+      critWalksSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        // Count unresolved failures
+        if (data.hasFailure && !data.failureResolvedAt) {
+          activeCount++;
+        }
+      });
+
+      await updateDoc(statusDoc.ref, {
+        activeFailureCount: activeCount,
+        hasActiveFailure: activeCount > 0,
+        lastFailureAt: hasFailure ? Timestamp.now() : statusDoc.data().lastFailureAt
+      });
+    }
+
+    console.log('Failure details updated successfully');
+  } catch (error) {
+    console.error('Error updating failure details:', error);
+    throw new Error('Failed to update failure details');
   }
 };

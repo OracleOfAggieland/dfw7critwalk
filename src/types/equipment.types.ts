@@ -21,6 +21,11 @@ export interface EquipmentStatus {
   nextDueBy: Timestamp | null;
   status: 'green' | 'yellow' | 'red' | 'never';
   totalWalksCompleted: number;
+
+  // Active failure tracking
+  hasActiveFailure: boolean;
+  activeFailureCount: number;
+  lastFailureAt?: Timestamp | null;
 }
 
 export interface EquipmentFormData {

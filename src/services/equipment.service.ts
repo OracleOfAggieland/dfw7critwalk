@@ -37,7 +37,10 @@ export const createEquipment = async (
       lastCritWalkBy: null,
       nextDueBy: null,
       status: 'never',
-      totalWalksCompleted: 0
+      totalWalksCompleted: 0,
+      hasActiveFailure: false,
+      activeFailureCount: 0,
+      lastFailureAt: null
     });
 
     return docRef.id;
